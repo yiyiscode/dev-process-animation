@@ -8,10 +8,12 @@
 
 - [x] 建立公開 repo：https://github.com/yiyiscode/dev-process-animation（main 只有一個空的 initial commit，工作都在 feat/ 分支）
 
+- [x] React+Vite（template 內建 oxlint）專案、`src/steps.ts`、B+C 版面（`src/App.tsx`）、`tests/steps.test.ts`（node --test）
+- [x] `.github/workflows/ci.yml`（PR：lint/test/build）、`deploy.yml`（merge 到 main 後部署 Pages）；分支 `feat/web-app`
+
 ## 下一步
-1. 使用者選好方案後：建立 React+Vite 專案，把 demo 裡的 `STEPS` 搬到 `src/steps.ts`
-2. 推到 GitHub，設定 Actions：PR 跑 lint/test/build，merge 後部署到 GitHub Pages
-3. 網頁定稿後：沿用 Time Series Analysis 的 `src/tts.py` 產生旁白，再用 Remotion 讀 timings.json 做影片（8–12 分鐘）
+1. 使用者 review 並 merge 第一個 PR → 確認 Pages 部署成功
+2. 網頁定稿後：沿用 Time Series Analysis 的 `src/tts.py` 產生旁白，再用 Remotion 讀 timings.json 做影片（8–12 分鐘）
 
 ## 關鍵決策
 - 範圍：需求 → 驗收條件 → Issue → 分支 → AI 寫程式 → 人看 diff → PR → CI（失敗迴圈）→ AI review → 人 review（失敗迴圈）→ merge → staging → prod → 關閉 Issue
