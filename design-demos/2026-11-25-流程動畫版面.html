@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>開發流程動畫 — 版面方案 demo</title>
+<style>
+  :root {
+    --bg:#0f1218; --panel:#171b23; --line:#2a303c; --text:#e6e8ec; --dim:#8b93a3;
+    --human:#5aa9ff; --ai:#c08cff; --github:#e6e8ec; --ci:#4fd18b;
+    --err:#ff6b6b; --warn:#ffc34d; --ok:#4fd18b;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.6 "Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif; }
+  code, .mono { font-family:"Cascadia Code",Consolas,monospace; }
+  header { display:flex; gap:8px; align-items:center; padding:12px 20px; border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--bg); z-index:5; flex-wrap:wrap; }
+  header h1 { font-size:15px; margin:0 16px 0 0; font-weight:600; }
+  .tab { background:none; border:1px solid var(--line); color:var(--dim); padding:6px 14px; border-radius:6px; cursor:pointer; font:inherit; }
+  .tab[aria-selected=true] { color:var(--text); border-color:var(--human); background:#1c2533; }
+  .tradeoff { width:100%; color:var(--dim); font-size:13px; margin-top:4px; }
+  main { padding:20px; max-width:1280px; margin:0 auto; }
+  .controls { display:flex; gap:8px; align-items:center; margin-bottom:16px; flex-wrap:wrap; }
+  .controls button { background:var(--panel); color:var(--text); border:1px solid var(--line); border-radius:6px; padding:6px 12px; cursor:pointer; font:inherit; }
+  .controls button:hover { border-color:var(--dim); }
+  .controls .count { color:var(--dim); font-size:13px; margin-left:8px; }
+  .legend { margin-left:auto; display:flex; gap:12px; font-size:13px; color:var(--dim); }
+  .legend i { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:4px; vertical-align:middle; }
+  .view { display:none; } .view.on { display:block; }
+
+  /* 共用：說明卡與模擬畫面 */
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px 18px; }
+  .card h2 { margin:0 0 4px; font-size:18px; }
+  .meta { font-size:13px; color:var(--dim); margin-bottom:8px; }
+  .gate { display:inline-block; font-size:12px; padding:1px 8px; border-radius:999px; border:1px solid var(--warn); color:var(--warn); margin-left:6px; }
+  .loopTag { display:inline-block; font-size:12px; padding:1px 8px; border-radius:999px; border:1px solid var(--err); color:var(--err); margin-left:6px; }
+  .screen { background:#0b0d12; border:1px solid var(--line); border-radius:8px; overflow:hidden; margin-top:12px; }
+  .screen .bar { background:#1a1f29; padding:6px 10px; font-size:12px; color:var(--dim); display:flex; gap:6px; align-items:center; }
+  .screen .bar b { width:9px; height:9px; border-radius:50%; background:#3a414f; display:inline-block; }
+  .screen pre { margin:0; padding:12px 14px; font:13px/1.65 "Cascadia Code",Consolas,monospace; white-space:pre-wrap; }
+  .l-add { color:var(--ok); } .l-del { color:var(--err); } .l-err { color:var(--err); } .l-ok { color:var(--ok); }
+  .l-warn { color:var(--warn); } .l-dim { color:var(--dim); } .l-ai { color:var(--ai); } .l-h { color:#fff; font-weight:600; }
+  .l-flag { background:rgba(255,195,77,.12); color:var(--warn); display:block; }
+
+  /* A：水平管線 */
+  .pipe { display:grid; grid-auto-flow:column; grid-auto-columns:minmax(92px,1fr); grid-template-rows:auto auto auto; gap:6px 4px; overflow-x:auto; padding-bottom:8px; }
+  .stageHdr { grid-row:1; font-size:12px; color:var(--dim); border-bottom:2px solid var(--line); padding-bottom:2px; }
+  .node { grid-row:2; border:1px solid var(--line); border-radius:8px; padding:8px; font-size:13px; cursor:pointer; background:var(--panel); position:relative; min-height:62px; transition:transform .25s, border-color .25s; }
+  .node.loop { grid-row:3; border-style:dashed; border-color:#5a2e2e; }
+  .node .who { font-size:11px; color:var(--dim); }
+  .node.done { opacity:.55; }
+  .node.cur { border-color:var(--warn); transform:translateY(-3px); box-shadow:0 0 0 2px rgba(255,195,77,.25); opacity:1; }
+  .node .dot { position:absolute; top:8px; right:8px; width:8px; height:8px; border-radius:50%; }
+  .aDetail { margin-top:16px; display:grid; grid-template-columns:1fr 1.2fr; gap:16px; }
+
+  /* B：泳道 */
+  .lanes { position:relative; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:10px 10px 10px 110px; overflow-x:auto; }
+  .lane { height:64px; border-bottom:1px dashed var(--line); position:relative; }
+  .lane:last-child { border-bottom:none; }
+  .lane .lbl { position:absolute; left:-100px; top:20px; width:92px; font-size:13px; }
+  .lanes svg { position:absolute; left:110px; top:10px; pointer-events:none; }
+  .bdot { position:absolute; width:26px; height:26px; margin:-13px 0 0 -13px; border-radius:50%; border:2px solid; background:var(--bg); cursor:pointer; font-size:11px; display:grid; place-items:center; color:var(--dim); transition:transform .25s; z-index:2; }
+  .bdot.cur { transform:scale(1.35); color:#000; }
+  .bdot.loop { border-style:dashed; }
+  .bDetail { margin-top:16px; display:grid; grid-template-columns:1fr 1.2fr; gap:16px; }
+
+  /* C：模擬工具畫面 */
+  .cWrap { display:grid; grid-template-columns:240px 1fr; gap:16px; }
+  .stepper { list-style:none; margin:0; padding:0; border-left:2px solid var(--line); }
+  .stepper li { padding:5px 10px; font-size:13px; cursor:pointer; color:var(--dim); border-left:3px solid transparent; margin-left:-2px; }
+  .stepper li.done { color:#aab1bf; }
+  .stepper li.cur { color:var(--text); border-left-color:var(--warn); background:#1c2029; }
+  .stepper li.loop { padding-left:24px; }
+  .stepper .stg { font-size:11px; color:var(--dim); padding:10px 10px 2px; cursor:default; }
+  .cMain .screen { margin-top:0; min-height:300px; }
+  .cMain .screen pre { font-size:14px; }
+  .cMain .card { margin-top:12px; }
+  @media (max-width:860px){ .aDetail,.bDetail,.cWrap{ grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>開發流程動畫 · 版面方案</h1>
+  <button class="tab" data-v="A" aria-selected="true">A　水平管線</button>
+  <button class="tab" data-v="B">B　角色泳道</button>
+  <button class="tab" data-v="C">C　模擬工具畫面</button>
+  <div class="tradeoff" id="tradeoff"></div>
+</header>
+<main>
+  <div class="controls">
+    <button id="prev">◀ 上一步</button>
+    <button id="next">下一步 ▶</button>
+    <button id="play">▶ 自動播放</button>
+    <span class="count" id="count"></span>
+    <div class="legend">
+      <span><i style="background:var(--human)"></i>人</span>
+      <span><i style="background:var(--ai)"></i>AI（Claude Code）</span>
+      <span><i style="background:var(--github)"></i>GitHub</span>
+      <span><i style="background:var(--ci)"></i>CI/CD</span>
+    </div>
+  </div>
+
+  <section class="view on" id="vA">
+    <div class="pipe" id="pipe"></div>
+    <div class="aDetail"><div class="card" id="aCard"></div><div id="aScreen"></div></div>
+  </section>
+
+  <section class="view" id="vB">
+    <div class="lanes" id="lanes"></div>
+    <div class="bDetail"><div class="card" id="bCard"></div><div id="bScreen"></div></div>
+  </section>
+
+  <section class="view" id="vC">
+    <div class="cWrap">
+      <ul class="stepper" id="stepper"></ul>
+      <div class="cMain"><div id="cScreen"></div><div class="card" id="cCard"></div></div>
+    </div>
+  </section>
+</main>
+
+<script>
+// 這份資料之後會搬到正式專案的 steps.ts，網頁和 Remotion 共用
+const ACTORS = {
+  human:  { name:'人（開發者）', color:'var(--human)' },
+  ai:     { name:'AI（Claude Code）', color:'var(--ai)' },
+  github: { name:'GitHub', color:'var(--github)' },
+  ci:     { name:'CI/CD（Actions）', color:'var(--ci)' },
+};
+const STEPS = [
+  { stage:'規劃', actor:'human', title:'需求', short:'需求',
+    desc:'使用者回饋：「常常忘記快到期的待辦。」討論後決定做「到期日提醒」：到期前一天和當天都要提醒。',
+    screen:{ title:'會議筆記', lines:[['h','到期日提醒 — 需求討論'],['','痛點：使用者錯過到期的待辦'],['','範圍：只做 App 內提醒，不做 email／推播'],['dim','→ 推播另開需求，這次不做']] } },
+  { stage:'規劃', actor:'human', title:'拆票＋驗收條件', short:'驗收條件',
+    desc:'把需求拆成一個 PR 能完成的小票，並寫成可以測試的驗收條件。後面的測試、AI 驗證、staging 驗收都以這份條件為準。',
+    screen:{ title:'Issue 草稿', lines:[['h','驗收條件（Given / When / Then）'],['','1. 待辦明天到期 → 顯示「明天到期」'],['','2. 待辦今天到期 → 顯示「今天到期」'],['','3. 已完成或沒有到期日 → 不提醒'],['','4. 以使用者時區（Asia/Taipei）判斷日期'],['flag','↑ 第 2、4 條後面會抓到 AI 的 bug']] } },
+  { stage:'規劃', actor:'github', title:'建立 Issue #42', short:'Issue #42',
+    desc:'Ticket 放在 GitHub Issue，附上驗收條件、label 和負責人。Jira 和 GitLab Issue 也是同樣的概念。',
+    screen:{ title:'github.com/you/todo/issues/42', lines:[['h','#42  到期日提醒'],['dim','Open · label: feature · assignee: you'],['','驗收條件：1～4（同上）']] } },
+  { stage:'開發', actor:'human', title:'開分支', short:'開分支',
+    desc:'從最新的 main 開一條功能分支，分支名稱帶上 Issue 編號，方便追溯。',
+    screen:{ title:'terminal', lines:[['','$ git switch main && git pull'],['','$ git switch -c feat/42-due-reminder'],['ok',"Switched to a new branch 'feat/42-due-reminder'"]] } },
+  { stage:'開發', actor:'ai', title:'AI 寫程式', short:'AI 寫程式',
+    desc:'把 Issue 和驗收條件交給 Claude Code，請它實作並補上測試。人負責下指令，最後由人把關。',
+    screen:{ title:'claude', lines:[['','> 依 Issue #42 的驗收條件實作到期提醒，並補上測試'],['ai','● 讀取 src/todo.ts、tests/'],['ai','● 新增 src/reminder.ts（isDueSoon）'],['ai','● 新增 tests/reminder.test.ts（3 個測試）'],['ai','✔ 測試全部通過']] } },
+  { stage:'開發', actor:'human', gate:'關卡 1：人先看 diff', title:'人 review AI 的 diff', short:'看 diff',
+    desc:'「測試全過」不等於符合需求。人逐行看 diff，發現 AI 用 UTC 判斷日期：台灣時間 00:00–08:00 會被算成前一天，違反第 4 條驗收條件。',
+    screen:{ title:'git diff', lines:[['h','src/reminder.ts'],['add','+ export function isDueSoon(todo, now = new Date()) {'],['flag','+   const today = now.toISOString().slice(0, 10)  // ← UTC！違反驗收條件 4'],['add','+   return todo.due > today && todo.due <= addDays(today, 1)'],['add','+ }'],['dim','→ 請 AI 改用 Asia/Taipei，並補上時區測試']] } },
+  { stage:'開發', actor:'human', title:'commit + push', short:'push',
+    desc:'修好時區問題後 commit。訊息遵循 Conventional Commits，並關聯 Issue。',
+    screen:{ title:'terminal', lines:[['','$ git commit -m "feat: 到期日提醒 (#42)"'],['','$ git push -u origin feat/42-due-reminder']] } },
+  { stage:'整合', actor:'github', title:'開 PR #43', short:'PR #43',
+    desc:'PR 說明寫明做了什麼、怎麼驗證；寫上「Closes #42」，merge 時就會自動關閉 Issue。開了 PR 就會觸發 CI。',
+    screen:{ title:'github.com/you/todo/pull/43', lines:[['h','#43  feat: 到期日提醒'],['','Closes #42'],['','驗證：npm test；staging 依驗收條件手動驗收'],['dim','feat/42-due-reminder → main']] } },
+  { stage:'整合', actor:'ci', loop:true, gate:'關卡 2：測試當裁判', title:'CI 失敗', short:'CI ✗',
+    desc:'你照驗收條件第 2 條加的測試失敗了：AI 寫的是 due > today，把「今天到期」排除掉了。AI 自己寫的 3 個測試都沒涵蓋這個邊界。',
+    screen:{ title:'Actions · ci.yml', lines:[['ok','✓ lint'],['err','✗ test'],['dim','  build（skipped）'],['',''],['err','  ✗ 今天到期的待辦應提醒'],['err','    expected: true   received: false'],['dim','    at tests/reminder.test.ts:21']] } },
+  { stage:'整合', actor:'human', title:'修正→重推→CI 通過', short:'CI ✓',
+    desc:'把 > 改成 >=，確認符合第 2 條驗收條件後重新 push。CI 會自動重跑，這次全綠。',
+    screen:{ title:'Actions · ci.yml', lines:[['del','-   return todo.due > today && …'],['add','+   return todo.due >= today && …'],['',''],['ok','✓ lint   ✓ test (5)   ✓ build']] } },
+  { stage:'審查', actor:'ai', gate:'關卡 3、4：要依據、驗證 AI review', title:'AI Code Review', short:'AI review',
+    desc:'AI 先 review 一輪。每則意見都要附上依據（檔案行號、可以重現的測試）；人逐一判斷要採納、駁回，還是另開 Issue。',
+    screen:{ title:'PR #43 · AI review', lines:[['ok','✔ 採納  reminder.ts:4  todo.due 為 null 時會拋錯（附重現測試）'],['err','✘ 駁回  reminder.ts:9  「addDays 有記憶體洩漏」— 沒有依據，查證後是誤報'],['warn','↪ 另開  「建議日期全改用 dayjs」— 超出範圍 → Issue #44']] } },
+  { stage:'審查', actor:'human', loop:true, title:'人 review：Request changes', short:'要求修改',
+    desc:'同事 review 時要求修改：提醒文字寫死成中文，請改放到 i18n 檔。',
+    screen:{ title:'PR #43 · review', lines:[['warn','● Changes requested by teammate'],['','  reminder.ts:12  「明天到期」請改放到 locales/'],['dim','→ 回到開發：再 commit 一次']] } },
+  { stage:'審查', actor:'human', title:'再 commit → Approve', short:'Approve',
+    desc:'修改後 push，CI 會再跑一次；reviewer 確認後按下 Approve。',
+    screen:{ title:'PR #43', lines:[['','$ git commit -m "refactor: 提醒文字移到 i18n"'],['ok','✓ CI 通過'],['ok','✔ Approved']] } },
+  { stage:'整合', actor:'github', title:'Squash merge 到 main', short:'merge',
+    desc:'用 squash merge，把這個 PR 的多個 commit 壓成一個，main 的歷史會比較乾淨。合併後觸發 CD。',
+    screen:{ title:'PR #43', lines:[['ok','✔ Squashed and merged into main'],['dim','feat: 到期日提醒 (#43)']] } },
+  { stage:'部署', actor:'ci', title:'CD：部署 staging', short:'staging',
+    desc:'自動部署到 staging，再照驗收條件 1～4 手動驗一次，特別是時區那條。',
+    screen:{ title:'Actions · deploy.yml', lines:[['ok','✓ build'],['ok','✓ deploy → staging.todo.app'],['','  驗收：1 ✓  2 ✓  3 ✓  4 ✓']] } },
+  { stage:'部署', actor:'ci', title:'CD：部署 production', short:'production',
+    desc:'staging 驗收通過後才部署到 production（通常要人按下核准，也就是 environment protection）。',
+    screen:{ title:'Actions · deploy.yml', lines:[['warn','⏸ 等待核准：production'],['ok','✓ approved'],['ok','✓ deploy → todo.app']] } },
+  { stage:'部署', actor:'github', title:'Issue #42 自動關閉', short:'關閉 #42',
+    desc:'因為 PR 寫了「Closes #42」，merge 時 Issue 就自動關閉，從需求到上線的每一步都能追溯。',
+    screen:{ title:'github.com/you/todo/issues/42', lines:[['ok','✔ Closed  by PR #43'],['dim','需求 → Issue → 分支 → PR → CI → Review → 部署']] } },
+];
+const TRADEOFF = {
+  A:'A 水平管線：一眼看到整條流程和失敗分支，最適合建立全局觀；缺點是看不出「誰」在做事，AI 和人的分工比較不明顯。',
+  B:'B 角色泳道：人／AI／GitHub／CI 各一條道，交棒過程和 AI 協作看得最清楚；缺點是步驟一多，橫向就要捲動。',
+  C:'C 模擬工具畫面：像在看真的 terminal／PR／Actions，最貼近實務；缺點是全局感比較弱，主要靠左邊的步驟清單補足。',
+};
+
+let cur = 0, view = 'A', timer = null;
+const $ = id => document.getElementById(id);
+const esc = s => s.replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+
+function screenHTML(s) {
+  return `<div class="screen"><div class="bar"><b></b><b></b><b></b><span class="mono">${esc(s.title)}</span></div><pre>${
+    s.lines.map(([c, t]) => `<span class="l-${c||'x'}">${esc(t)}</span>`).join('\n')}</pre></div>`;
+}
+function cardHTML(st, i) {
+  return `<h2>${i+1}. ${esc(st.title)}${st.gate ? `<span class="gate">${esc(st.gate)}</span>` : ''}${st.loop ? '<span class="loopTag">失敗迴圈</span>' : ''}</h2>
+    <div class="meta">${st.stage} · <span style="color:${ACTORS[st.actor].color}">${ACTORS[st.actor].name}</span></div><div>${esc(st.desc)}</div>`;
+}
+
+// A
+function buildA() {
+  const pipe = $('pipe'); pipe.innerHTML = '';
+  let col = 0, lastStage = null;
+  STEPS.forEach((st, i) => {
+    if (!st.loop) col++;
+    if (st.stage !== lastStage && !st.loop) {
+      const h = document.createElement('div'); h.className = 'stageHdr'; h.textContent = st.stage;
+      h.style.gridColumn = col; pipe.appendChild(h); lastStage = st.stage;
+    }
+    const n = document.createElement('div');
+    n.className = 'node' + (st.loop ? ' loop' : '');
+    n.style.gridColumn = col;
+    n.innerHTML = `<span class="dot" style="background:${ACTORS[st.actor].color}"></span><div class="who">${i+1}${st.loop?' ↺':''}</div>${esc(st.short)}`;
+    n.onclick = () => go(i); n.dataset.i = i;
+    pipe.appendChild(n);
+  });
+}
+// B
+const LANE_KEYS = ['human','ai','github','ci'], COLW = 64, LANEH = 64;
+function buildB() {
+  const el = $('lanes');
+  const w = COLW * STEPS.length + 20;
+  el.innerHTML = LANE_KEYS.map(k => `<div class="lane" style="width:${w}px"><span class="lbl" style="color:${ACTORS[k].color}">${ACTORS[k].name}</span></div>`).join('')
+    + `<svg width="${w}" height="${LANEH*4}"><polyline id="bLine" fill="none" stroke="#3a414f" stroke-width="2"/><polyline id="bDone" fill="none" stroke="var(--warn)" stroke-width="2"/></svg>`;
+  STEPS.forEach((st, i) => {
+    const d = document.createElement('div');
+    d.className = 'bdot' + (st.loop ? ' loop' : '');
+    d.style.left = (110 + 20 + i*COLW) + 'px';
+    d.style.top = (10 + LANE_KEYS.indexOf(st.actor)*LANEH + LANEH/2) + 'px';
+    d.style.borderColor = ACTORS[st.actor].color;
+    d.textContent = i+1; d.title = st.title; d.onclick = () => go(i); d.dataset.i = i;
+    el.appendChild(d);
+  });
+}
+const bPts = n => STEPS.slice(0, n).map((st, i) => `${20 + i*COLW},${LANE_KEYS.indexOf(st.actor)*LANEH + LANEH/2}`).join(' ');
+// C
+function buildC() {
+  const ul = $('stepper'); ul.innerHTML = ''; let last = null;
+  STEPS.forEach((st, i) => {
+    if (st.stage !== last) { ul.insertAdjacentHTML('beforeend', `<li class="stg">${st.stage}</li>`); last = st.stage; }
+    const li = document.createElement('li');
+    li.className = st.loop ? 'loop' : '';
+    li.innerHTML = `${st.loop ? '↺ ' : ''}${i+1}. ${esc(st.title)}`;
+    li.onclick = () => go(i); li.dataset.i = i; ul.appendChild(li);
+  });
+}
+
+function render() {
+  const st = STEPS[cur];
+  $('count').textContent = `${cur+1} / ${STEPS.length}`;
+  $('tradeoff').textContent = TRADEOFF[view];
+  document.querySelectorAll('[data-i]').forEach(e => {
+    const i = +e.dataset.i;
+    e.classList.toggle('cur', i === cur); e.classList.toggle('done', i < cur);
+    if (e.classList.contains('bdot')) e.style.background = i === cur ? ACTORS[STEPS[i].actor].color : i < cur ? '#2a303c' : 'var(--bg)';
+  });
+  $('bLine').setAttribute('points', bPts(STEPS.length));
+  $('bDone').setAttribute('points', bPts(cur + 1));
+  for (const v of 'ABC') { $(v.toLowerCase()+'Card').innerHTML = cardHTML(st, cur); $(v.toLowerCase()+'Screen').innerHTML = screenHTML(st.screen); }
+  document.querySelector(`#v${view} .cur`)?.scrollIntoView({ block:'nearest', inline:'center', behavior:'smooth' });
+}
+function go(i) { cur = Math.max(0, Math.min(STEPS.length - 1, i)); render(); }
+function stop() { clearInterval(timer); timer = null; $('play').textContent = '▶ 自動播放'; }
+$('prev').onclick = () => { stop(); go(cur - 1); };
+$('next').onclick = () => { stop(); go(cur + 1); };
+$('play').onclick = () => {
+  if (timer) return stop();
+  if (cur === STEPS.length - 1) go(0);
+  $('play').textContent = '⏸ 暫停';
+  timer = setInterval(() => cur === STEPS.length - 1 ? stop() : go(cur + 1), 2500);
+};
+document.addEventListener('keydown', e => { if (e.key === 'ArrowRight') $('next').click(); if (e.key === 'ArrowLeft') $('prev').click(); });
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
+  view = t.dataset.v;
+  document.querySelectorAll('.tab').forEach(x => x.setAttribute('aria-selected', x === t));
+  document.querySelectorAll('.view').forEach(x => x.classList.toggle('on', x.id === 'v' + view));
+  render();
+});
+buildA(); buildB(); buildC(); render();
+</script>
+</body>
+</html>
