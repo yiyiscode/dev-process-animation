@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ACTORS, LANES, STEPS, clampStep, type Step } from './steps.ts'
 
 const AUTOPLAY_MS = 3000
@@ -8,8 +8,16 @@ function Lanes({ cur, onPick }: { cur: number; onPick: (i: number) => void }) {
   const w = LABEL_W + COL_W * STEPS.length + 20
   const pt = (s: Step, i: number) => [LABEL_W + 28 + i * COL_W, LANES.indexOf(s.actor) * LANE_H + LANE_H / 2] as const
   const pts = (n: number) => STEPS.slice(0, n).map((s, i) => pt(s, i).join(',')).join(' ')
+  const h = LANE_H * LANES.length
+  const wrap = useRef<HTMLDivElement>(null)
+  useEffect(() => { // 窄螢幕時把當前步驟捲到中間
+    const el = wrap.current
+    if (el) el.scrollTo({ left: pt(STEPS[cur], cur)[0] - el.clientWidth / 2, behavior: 'smooth' })
+  }, [cur])
   return (
-    <svg className="lanes" viewBox={`0 0 ${w} ${LANE_H * LANES.length}`} role="list" aria-label="流程泳道">
+    <div className="lanesWrap" ref={wrap}>
+    {/* 固定 px 寬高、不縮放：字級測試靠這點才準；窄螢幕改為橫向捲動 */}
+    <svg className="lanes" width={w} height={h} viewBox={`0 0 ${w} ${h}`} role="list" aria-label="流程泳道">
       {LANES.map((k, r) => (
         <g key={k}>
           {r > 0 && <line x1={0} x2={w} y1={r * LANE_H} y2={r * LANE_H} className="laneSep" />}
@@ -26,13 +34,14 @@ function Lanes({ cur, onPick }: { cur: number; onPick: (i: number) => void }) {
              aria-label={`${i + 1}. ${s.title}`} aria-current={i === cur ? 'step' : undefined}
              onClick={() => onPick(i)} onKeyDown={e => e.key === 'Enter' && onPick(i)}>
             <title>{s.title}</title>
-            <circle cx={x} cy={y} r={i === cur ? 16 : 12} stroke={ACTORS[s.actor].color}
+            <circle cx={x} cy={y} r={i === cur ? 18 : 14} stroke={ACTORS[s.actor].color}
                     style={i === cur ? { fill: ACTORS[s.actor].color } : undefined} />
-            <text x={x} y={y + 4}>{i + 1}</text>
+            <text x={x} y={y + 5}>{i + 1}</text>
           </g>
         )
       })}
     </svg>
+    </div>
   )
 }
 
