@@ -6,6 +6,8 @@
 - [x] 版面方案 demo：`design-demos/2026-11-25-流程動畫版面.html`（A 水平管線／B 角色泳道／C 模擬工具畫面）
 - [x] 選定版面：B+C 混搭（上方 B 角色泳道看全局與交棒，下方 C 模擬工具畫面大窗）
 
+- [x] 建立公開 repo：https://github.com/yiyiscode/dev-process-animation（main 只有一個空的 initial commit，工作都在 feat/ 分支）
+
 ## 下一步
 1. 使用者選好方案後：建立 React+Vite 專案，把 demo 裡的 `STEPS` 搬到 `src/steps.ts`
 2. 推到 GitHub，設定 Actions：PR 跑 lint/test/build，merge 後部署到 GitHub Pages
