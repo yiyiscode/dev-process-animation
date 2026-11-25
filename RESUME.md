@@ -4,7 +4,7 @@
 - [x] 2026-11-25 grilling 定案（決策記在 memory：project-scope-decisions）
 - [x] git init，分支 `feat/design-demo`
 - [x] 版面方案 demo：`design-demos/2026-11-25-流程動畫版面.html`（A 水平管線／B 角色泳道／C 模擬工具畫面）
-- [ ] 等使用者選定方案（或指定要混搭的部分）
+- [x] 選定版面：B+C 混搭（上方 B 角色泳道看全局與交棒，下方 C 模擬工具畫面大窗）
 
 ## 下一步
 1. 使用者選好方案後：建立 React+Vite 專案，把 demo 裡的 `STEPS` 搬到 `src/steps.ts`
